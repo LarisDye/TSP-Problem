@@ -1,5 +1,71 @@
 # 经典 TSP 问题的模拟退火算法
 
+新增完整的 **C++17 ATT48 实验**：美国本土 48 州首府，沿用本文的模拟退火 + 2-opt 算法，支持逐提案可视化和运行中关闭显示。默认种子 42 实测得到 **10628 ATT 单位**，等于 [TSPLIB 官方最优值](https://comopt.ifi.uni-heidelberg.de/software/TSPLIB95/tsp/TSP-BEST.html)。连续种子 42–61 的 20 次运行中有 3 次达到最优值，平均费用 10687.70；这是本次实验结果，不是每次运行的保证。
+
+## C++ 快速运行
+
+在项目根目录执行（Windows，已安装 MinGW-w64 的 `g++`）：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File build.ps1 -Test
+.\build\tsp_sa.exe
+```
+
+这里的执行策略参数只作用于本次 PowerShell 子进程。程序会询问 `Visualize every proposal? [y/N]`：输入 `y` 打开显示，回车关闭显示。也可以明确指定：
+
+```powershell
+.\build\tsp_sa.exe --visual
+.\build\tsp_sa.exe --no-visual
+.\build\tsp_sa.exe --help
+```
+
+可视化使用 Windows 原生窗口，无第三方图形依赖。每一次 2-opt 候选提案（包括拒绝和等长提案）都在接受判断后同步绘制**当前路线**，并显示迭代次数、温度、当前费用和历史最好费用。没有抽帧，也不会把最好路线冒充当前搜索路线。搜索完成后显示最终最好路线，结果文件已经保存，可关闭窗口退出。
+
+- **空格**：暂停 / 继续。
+- **N**：暂停状态下前进一步。
+- **+ / -**：增减帧间等待时间。
+- **Esc / V / 窗口关闭按钮**：实时关闭可视化，求解继续，结果照常保存。暂停时也能关闭。
+
+默认每帧等待 16 ms；完整预算有 2,188,800 次提案，逐帧展示仅等待就约需 9.7 小时。可以观察一段后关闭显示，或用下列约两分钟的较小预算演示（该演示不保证达到 10628）：
+
+```powershell
+.\build\tsp_sa.exe --visual --steps 50 --max-levels 150 --cooling 0.94
+```
+
+`--frame-ms 0` 取消人为帧间等待，但仍同步绘制每一步。界面开关和等待均不消耗求解器随机数，不影响固定种子的搜索结果。批量实验使用 `--no-visual`。
+
+## 复现论文的 ATT48 实验
+
+数据已随项目保存，详见 [数据说明](data/README.md)。求解器只读取 `att48.tsp`，从不读取参考最优路线。**ATT 费用不等于公里、公路里程或普通欧氏距离。** 地图上的经纬度和州界只用于展示。
+
+```powershell
+.\build\tsp_sa.exe --no-visual --seed 42 --runs 20 --output results/att48
+python scripts/verify_results.py
+python -m pip install -r requirements-figures.txt
+python scripts/make_figures.py
+xelatex -interaction=nonstopmode -halt-on-error -output-directory=output/pdf tsp_simulated_annealing.tex
+xelatex -interaction=nonstopmode -halt-on-error -output-directory=output/pdf tsp_simulated_annealing.tex
+```
+
+成稿：[output/pdf/tsp_simulated_annealing.pdf](output/pdf/tsp_simulated_annealing.pdf)。主 TeX 引入 [att48_experiment.tex](att48_experiment.tex)，新增地理地图、结果闭环地图、原始坐标中的初始/最终路线、收敛曲线、20 次运行比较、参数与复现说明。图件为 `figures/` 下的矢量 PDF 和 PNG。仓库已有图件及实验数值，可直接编译 TeX，无须安装绘图依赖或联网。
+
+`results/att48/seed_<seed>/` 保存每次运行的 `result.json`、`history.csv`、`best.tour`；总目录的 `runs.csv` 汇总全部运行，`result.json` 等文件保存这批实验中最好的运行（并列取最先出现者）。默认普通运行写入 `results/latest/`。重复使用同一输出目录会覆盖同名文件；若需保留旧实验，请使用新的 `--output` 目录。
+
+收敛文件含初始状态和每个温度层末的状态，共 457 行数据；`iteration` 为累计提案数，`accepted` 为累计接受数。实时窗口仍逐提案刷新。首次发现最好解的精确提案数另存于 JSON 的 `best_iteration`。图中的统计与数值宏自动读取运行结果生成，未手工编造曲线。
+
+主要文件：`src/tsp.hpp` 为算法；`src/visualizer.hpp` 为 Windows 绘图；`src/main.cpp` 为命令行及记录输出。整数费用采用 64 位，输入支持 TSPLIB `ATT`、`EUC_2D`，不支持的边权类型明确报错。`--seed`、`--cooling`、`--min-ratio`、`--steps`、`--max-levels`、`--runs` 均可配置。
+
+若使用 CMake，可执行 `cmake -S . -B build/cmake` 和 `cmake --build build/cmake --config Release`。Linux/macOS 可用 `g++ -std=c++17 -O2 src/main.cpp -o build/tsp_sa` 编译无界面版本；实时窗口仅支持 Windows。
+
+验证包括：官方最优回路费用、10,810 次四边增量核对、小实例精确解、逐提案回调、关闭后继续搜索及全部 20 次保存结果的独立费用重算。运行真实窗口集成测试：
+
+```powershell
+g++ -std=c++17 -O2 -static tests/test_visualizer.cpp -o build/test_visualizer.exe -lgdi32 -luser32
+.\build\test_visualizer.exe
+```
+
+该测试仅创建并操作自身窗口，检查暂停、单步以及暂停时 X/Esc/V 关闭后计算继续。以下保留原有模型推导和 Python 教学示例。
+
 本文依次说明 TSP 的数学模型、模拟退火的数学原理，以及二者如何组成一个可执行算法。主例是完全图上的**对称 TSP**；二维欧氏距离只是其中一种情况。
 
 ## 1. 经典 TSP 问题

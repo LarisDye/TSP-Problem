@@ -1,6 +1,6 @@
 % !TeX program = xelatex
 % !TeX encoding = UTF-8
-% Standalone source: no external images, bibliography database or code files.
+% Compile from the project root; ATT48 figures and experiment records are bundled.
 % Compile twice: xelatex tsp_simulated_annealing.tex
 \documentclass[UTF8,a4paper,11pt,fontset=none]{ctexart}
 
@@ -52,6 +52,7 @@
 \usepackage{enumitem}
 \setlist{topsep=3pt,itemsep=2pt,parsep=0pt,leftmargin=2em}
 \usepackage{booktabs,tabularx,array}
+\usepackage{graphicx}
 \renewcommand{\arraystretch}{1.2}
 \usepackage[font=small,labelfont=bf,labelsep=quad]{caption}
 \usepackage{tikz}
@@ -125,7 +126,8 @@
 \noindent\textbf{摘要}\quad
 本文以完全图上的对称旅行商问题为对象，给出排列形式的数学模型，解释模拟退火的
 Boltzmann 分布与 Metropolis 接受准则，并详细推导基于 2-opt 区间反转的求解算法。
-文中包含温度设置、完整伪代码、手算示例、复杂度分析及已验证的 Python 实现使用方法。
+文中包含温度设置、完整伪代码、手算示例、复杂度分析及已验证的 Python 实现使用方法，
+并给出 C++17 对美国本土 48 州首府经典实例 ATT48 的求解、逐提案可视化、地理地图与收敛实验。
 模拟退火用于在有限计算预算内寻找高质量路线，其输出一般不附带全局最优性证明。
 
 \vspace{4pt}
@@ -511,6 +513,9 @@ print(result.length)
 这些是针对具体实例和实现行为的验证，不能推广为模拟退火的普遍最优性保证。
 
 \clearpage
+\input{att48_experiment.tex}
+
+\clearpage
 \begin{thebibliography}{9}
   \small
   \raggedright
@@ -542,6 +547,20 @@ print(result.length)
   Cooling schedules for optimal annealing.
   \emph{Mathematics of Operations Research}, 1988, 13(2): 311--329.
   \href{https://doi.org/10.1287/moor.13.2.311}{doi:10.1287/moor.13.2.311}.
+
+  \bibitem{tsplib}
+  Reinelt, G. \emph{TSPLIB 95: Documentation and TSP instances}.
+  Universität Heidelberg.
+  \url{https://comopt.ifi.uni-heidelberg.de/software/TSPLIB95/}.
+
+  \bibitem{attbest}
+  TSPLIB. \emph{Optimal solutions for symmetric TSPs: att48 = 10628}.
+  \url{https://comopt.ifi.uni-heidelberg.de/software/TSPLIB95/tsp/TSP-BEST.html}.
+
+  \bibitem{naturalearth}
+  Natural Earth. \emph{Admin 1 -- States and Provinces (1:110m);
+  Populated Places (1:10m)}. Public domain map data.
+  \url{https://github.com/nvkelso/natural-earth-vector}.
 \end{thebibliography}
 
 \end{document}
